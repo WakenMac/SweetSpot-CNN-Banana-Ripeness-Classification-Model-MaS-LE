@@ -1,0 +1,51 @@
+MaS LE
+├── CNN Related Code
+│   ├── CNN_conservative.py
+│   ├── CNN_ResNet101.py
+│   ├── CNN_vanilla.py
+│   └── import_data.py
+├── Dataset Annotation Code
+│   ├── Resize.py
+│   └── Augment.py
+├── Datasets
+│   ├── Final Dataset
+│   │   ├── train
+│   │   ├── test
+│   │   └── validation
+│   ├── Real World Dataset
+│   │   └── Banana Images
+│   ├── Annotated Dataset
+│   │   ├── Merged Dataset
+│   │   │   ├── Rotten
+│   │   │   ├── Ripe
+│   │   │   ├── Overripe
+│   │   │   └── Unripe
+│   │   ├── Fayoum Uni Annotated Dataset
+│   │   │   ├── Augment_List.csv
+│   │   │   ├── Ripe
+│   │   │   ├── Overripe
+│   │   │   └── Unripe
+│   │   ├── Fayoum Uni Dataset
+│   │   │   ├── Ripe
+│   │   │   ├── Overripe
+│   │   │   └── Unripe
+│   │   └── Shariar Dataset
+│   │       ├── Rotten
+│   │       ├── Ripe
+│   │       ├── Overripe
+│   │       └── Unripe
+│   └── Original Datasets
+│       ├── Shariar Dataset
+│       │   ├── Rotten
+│       │   ├── Ripe
+│       │   ├── Overripe
+│       │   └── Unripe
+│       └── Fayoum Uni Dataset
+│           ├── Unripe
+│           ├── Ripe
+│           └── Overripe
+├── Conceptual Paper
+│   └── GIGAWIN-MACLANG-TAGLE_Modelling and Simulation_Conceptual Paper.pdf
+├── Literature
+├── file_structure.txt
+└── requirements.txt
