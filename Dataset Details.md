@@ -1,6 +1,6 @@
 ## Datasets Utilized
 
-### \[1\] GiMaTag Dataset
+### \[1\] GiMaTag Banana Dataset
 
 The split version of the "Final Integrated Dataset", where the dataset is split into 80:10:10 ratio for training, validating, and testing the model.
 
