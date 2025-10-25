@@ -7,7 +7,7 @@ The split version of the "Final Integrated Dataset", where the dataset is split 
 **Composition (Images):**
 
 |   | Unripe | Ripe | Overripe | Rotten | Total |
-|----|:--:|:--:|:--:|:--:|:--:|
+|------------|:----------:|:----------:|:----------:|:----------:|:----------:|
 | **Train** | 2,575 (19.82%) | 4,300 (33.09%) | 2,416 (18.59%) | 3,674 (28.27%) | 12,995 (80%) |
 | **Test** | 323 (19.89%) | 538 (33.13%) | 303 (18.66%) | 460 (28.33%) | 1,624 (10%) |
 | **Validation** | 321 (19.82%) | 537 (33.17%) | 302 (18.65%) | 459 (28.35%) | 1,619 (10%) |
@@ -40,6 +40,10 @@ Given the ratio of our dataset, the model is expected to predict ripe bananas, a
 
 ### \[3\] Shahriar Musa Acuminata Dataset
 
+The dataset was taken from Kaggle: [Ripeness Classification Dataset (S.M. Shahriar)](https://www.kaggle.com/datasets/shahriar26s/banana-ripeness-classification-dataset). Similarly, details on the augmentations made are also listed in the link mentioned.
+
+We took the images from the train, test, and validation folders and compiled them based on their class. The composition of the images are listed below:
+
 **Composition (Images):**
 
 |          | Number of Images |     \%     |
@@ -66,7 +70,17 @@ Rotten: Rotten, Unripe, Banana, Ripe
 
   Fresh unripe, unripe, fresh ripe, ripe, overripe, mold, rotten
 
-### \[4\] Fayoum University Dataset (Plantain)
+### \[4\] Fayoum University Banana Classes
+
+This dataset was utilized in several studies such as:
+
+> \[5\]	N. Saranya, K. Srinivasan, and S. K. Pravin Kumar. 2021. Banana ripeness stage identification: a deep learning approach. Journal of Ambient Intelligence and Humanized Computing 13, 8: 4033–4039.
+>
+> \[6\]	Fatma M. A. Mazen and Ahmed A. Nashat. 2019. Ripeness classification of bananas using an artificial neural network. Arabian Journal for Science and Engineering 44, 8: 6901–6910.
+
+It is accessible through this drive link: [Fayoum University Banana Classes](https://drive.google.com/drive/folders/1nRWBYAHNRqmL4R0SLrs6dbGQFSWGVY8V), and consists of 273 images of Plantain bananas with 4 classes as listed below.
+
+**Composition (Images):**
 
 |                                 | Number of Images |     \%     |
 |---------------------------------|:----------------:|:----------:|
@@ -76,7 +90,9 @@ Rotten: Rotten, Unripe, Banana, Ripe
 | Yellowish Green (Ripe)          |        48        |   17.58%   |
 | TOTAL                           |       273        |    100%    |
 
-### \[5\] Fayoum University Dataset (Augmented by Researchers)
+### \[5\] Fayoum University Banana Classes (Augmented by Researchers)
+
+It is the augmented version of the original dataset \[4\].
 
 **Composition (Images):**
 

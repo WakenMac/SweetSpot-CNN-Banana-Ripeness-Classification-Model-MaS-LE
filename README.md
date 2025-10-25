@@ -88,3 +88,9 @@ Kindly run the following code in your terminal to download the required dependen
 ```{python}
 pip install -r requirements.txt
 ```
+
+### 3. Downloading the Datasets
+
+To download the specific datasets for you to manually augment, kindly head to the "Dataset Details.md" else, you can head to this specific drive link:
+
+[GiMaTag Dataset](https://drive.google.com/drive/folders/1KPevtDtvTLYjyuAa00NRWERGVLXU0HNQ?usp=drive_link)
