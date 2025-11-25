@@ -74,9 +74,9 @@ Rotten: Rotten, Unripe, Banana, Ripe
 
 This dataset was utilized in several studies such as:
 
-> \[5\]	N. Saranya, K. Srinivasan, and S. K. Pravin Kumar. 2021. Banana ripeness stage identification: a deep learning approach. Journal of Ambient Intelligence and Humanized Computing 13, 8: 4033–4039.
+> \[5\] N. Saranya, K. Srinivasan, and S. K. Pravin Kumar. 2021. Banana ripeness stage identification: a deep learning approach. Journal of Ambient Intelligence and Humanized Computing 13, 8: 4033–4039.
 >
-> \[6\]	Fatma M. A. Mazen and Ahmed A. Nashat. 2019. Ripeness classification of bananas using an artificial neural network. Arabian Journal for Science and Engineering 44, 8: 6901–6910.
+> \[6\] Fatma M. A. Mazen and Ahmed A. Nashat. 2019. Ripeness classification of bananas using an artificial neural network. Arabian Journal for Science and Engineering 44, 8: 6901–6910.
 
 It is accessible through this drive link: [Fayoum University Banana Classes](https://drive.google.com/drive/folders/1nRWBYAHNRqmL4R0SLrs6dbGQFSWGVY8V), and consists of 273 images of Plantain bananas with 4 classes as listed below.
 
