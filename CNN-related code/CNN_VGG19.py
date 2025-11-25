@@ -125,6 +125,33 @@ class GiMaTagCNN(nn.Module):
         x = self.fc(x)
         return x   # raw logits for CrossEntropyLoss
 
+class EarlyStopper:
+    def __init__(self, patience=5, min_delta=0):
+        # patience: How many epochs to wait after the last best result
+        self.patience = patience
+        # min_delta: Minimum change to qualify as an improvement
+        self.min_delta = min_delta
+        
+        self.counter = 0
+        self.best_validation_loss = float('inf')
+        self.should_stop = False
+
+    def check_stop(self, validation_loss):
+        if validation_loss < self.best_validation_loss - self.min_delta:
+            # Improvement found! Reset counter and update best loss
+            self.best_validation_loss = validation_loss
+            self.counter = 0
+            # Save the current best model
+            torch.save(model.state_dict(), 'best_gimatag_model.pth')
+            print("Validation loss improved. Model saved.")
+        else:
+            # No improvement
+            self.counter += 1
+            print(f"EarlyStopping counter: {self.counter} of {self.patience}")
+            if self.counter >= self.patience:
+                self.should_stop = True
+        return self.should_stop
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = GiMaTagCNN(num_classes=4).to(device)
 # model = torch.compile(model)
@@ -132,6 +159,8 @@ torch.backends.cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()              # handles softmax internally
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
+
+early_stopper = EarlyStopper(patience=5)
 
 print('Starting model training...')
 
@@ -191,9 +220,20 @@ for epoch in range(1, num_epochs + 1):
             _, predicted = outputs.max(1)
             val_total += labels.size(0)
             val_correct += predicted.eq(labels).sum().item()
+        
+    avg_val_loss = val_loss / len(val_loader)
+
     print(f'Epoch [{epoch}/{num_epochs}] completed. '
-          f'Validation Loss: {val_loss / len(val_loader):.4f}, '
+          f'Validation Loss: {avg_val_loss:.4f}, '
           f'Validation Accuracy: {100 * val_correct / val_total:.2f}%\n')
+    
+    if early_stopper.check_stop(avg_val_loss):
+        print(f"🛑 Early stopping triggered after {epoch+1} epochs!")
+        break # Exit the training loop
+
+# 3. Load the best model after training finishes
+model.load_state_dict(torch.load('best_gimatag_model.pth'))
+print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
 
 
