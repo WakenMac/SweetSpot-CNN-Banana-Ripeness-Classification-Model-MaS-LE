@@ -39,7 +39,7 @@ train_loader = DataLoader(
     train_ds,
     batch_size=32,
     shuffle=True,
-    num_workers=4,            # like prefetching: loads data in parallel
+    num_workers=6,            # like prefetching: loads data in parallel
     pin_memory=True           # speeds up GPU transfer
 )
 
@@ -47,7 +47,7 @@ val_loader = DataLoader(
     val_ds,
     batch_size=32,
     shuffle=False,
-    num_workers=4,
+    num_workers=6,
     pin_memory=True
 )
 
@@ -55,7 +55,7 @@ test_loader = DataLoader(
     test_ds,
     batch_size=32,
     shuffle=False,
-    num_workers=4,
+    num_workers=6,
     pin_memory=True
 )
 
@@ -127,24 +127,73 @@ class GiMaTagCNN(nn.Module):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = GiMaTagCNN(num_classes=4).to(device)
+# model = torch.compile(model)
+torch.backends.cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()              # handles softmax internally
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
-for epoch in range(50):
+print('Starting model training...')
+
+# for epoch in range(50):
+    # model.train()
+    # for images, labels in train_loader:
+    #     images = images.to(device)
+    #     labels = labels.to(device)
+
+    #     optimizer.zero_grad()
+    #     outputs = model(images)
+    #     loss = criterion(outputs, labels)
+
+    #     loss.backward()
+    #     optimizer.step()
+
+    # print(f"Epoch {epoch+1}: Loss = {loss.item():.4f}")
+
+num_epochs = 50
+for epoch in range(1, num_epochs + 1):
     model.train()
-    for images, labels in train_loader:
-        images = images.to(device)
-        labels = labels.to(device)
+    running_loss = 0.0
+    correct = 0
+    total = 0
+    
+    for batch_idx, (inputs, labels) in enumerate(train_loader, 1):
+        inputs, labels = inputs.to(device), labels.to(device)
 
         optimizer.zero_grad()
-        outputs = model(images)
+        outputs = model(inputs)
         loss = criterion(outputs, labels)
-
         loss.backward()
         optimizer.step()
 
-    print(f"Epoch {epoch+1}: Loss = {loss.item():.4f}")
+        running_loss += loss.item()
+        _, predicted = outputs.max(1)
+        total += labels.size(0)
+        correct += predicted.eq(labels).sum().item()
+
+        # Print every 10 batches
+        if batch_idx % 10 == 0:
+            print(f'Epoch [{epoch}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], '
+                  f'Loss: {running_loss / batch_idx:.4f}, '
+                  f'Accuracy: {100 * correct / total:.2f}%')
+
+    # Validation after each epoch
+    model.eval()
+    val_loss = 0.0
+    val_correct = 0
+    val_total = 0
+    with torch.no_grad():
+        for inputs, labels in val_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            val_loss += loss.item()
+            _, predicted = outputs.max(1)
+            val_total += labels.size(0)
+            val_correct += predicted.eq(labels).sum().item()
+    print(f'Epoch [{epoch}/{num_epochs}] completed. '
+          f'Validation Loss: {val_loss / len(val_loader):.4f}, '
+          f'Validation Accuracy: {100 * val_correct / val_total:.2f}%\n')
 
 
 
