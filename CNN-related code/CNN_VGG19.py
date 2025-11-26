@@ -142,7 +142,7 @@ class EarlyStopper:
             self.best_validation_loss = validation_loss
             self.counter = 0
             # Save the current best model
-            torch.save(model.state_dict(), 'best_gimatag_model.pth')
+            torch.save(model.state_dict(), 'Saved Models\\best_gimatag_model.pth')
             print("Validation loss improved. Model saved.")
         else:
             # No improvement
@@ -235,5 +235,27 @@ for epoch in range(1, num_epochs + 1):
 model.load_state_dict(torch.load('best_gimatag_model.pth'))
 print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
+# Prediction
+model.eval()
+total_correct = 0
+total_labels = 0
+predicted_labels = None
 
+with torch.no_grad():
+    for images, labels in test_loader:
+        images = images.to(device)
+        labels = labels.to(device)
 
+        output = model(images)
+        _, predicted = output.max(1)
+
+        if not predicted_labels:
+            predicted_labels = predicted
+        else:
+            predicted_labels = torch.cat((predicted_labels, predicted), dim=0)
+
+        total_labels += labels.size(0)
+        total_correct += predicted.eq(labels).sum().item()
+
+test_accuracy = 100 * (total_correct / total_labels)
+print(f"Test Accuracy: {total_correct}/{total_labels} ({test_accuracy:.2f}%)")
