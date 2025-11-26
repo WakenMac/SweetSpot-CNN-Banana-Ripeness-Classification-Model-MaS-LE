@@ -42,7 +42,7 @@ print("Successfully imported the train, test, and validation datasets")
 
 train_loader = DataLoader(
     train_ds,
-    batch_size=32,
+    batch_size=64,
     shuffle=True,
     num_workers=6,            # like prefetching: loads data in parallel
     pin_memory=True           # speeds up GPU transfer
@@ -50,7 +50,7 @@ train_loader = DataLoader(
 
 val_loader = DataLoader(
     val_ds,
-    batch_size=32,
+    batch_size=64,
     shuffle=False,
     num_workers=6,
     pin_memory=True
@@ -58,7 +58,7 @@ val_loader = DataLoader(
 
 test_loader = DataLoader(
     test_ds,
-    batch_size=32,
+    batch_size=64,
     shuffle=False,
     num_workers=6,
     pin_memory=True
@@ -181,10 +181,11 @@ print('Starting model training...')
 # increasing dropout (0.5–0.6) if overfitting
 
 # Original
-# learning_rates = [1e-03, 3e-04, 1e-04, 3e-05, 1e-05]
-learning_rates = [3e-04, 1e-04, 3e-05, 1e-05]
+# learning_rates = [1e-03]
+learning_rates = [1e-03, 3e-04, 1e-04, 3e-05, 1e-05]
+# learning_rates = [3e-04, 1e-04, 3e-05, 1e-05]
 
-batch_sizes = 32
+batch_sizes = 64
 named_list = []
 accuracy_list = []
 loss_list = []
@@ -262,18 +263,18 @@ for i in range(len(learning_rates)):
         validation_loss_list.append(avg_val_loss)
 
         if early_stopper.check_stop(avg_val_loss, learning_rates[i]):
-            print(f"🛑 Early stopping triggered after {epoch+1} epochs!")
+            print(f"🛑 Early stopping triggered after {epoch} epochs!")
             break # Exit the training loop
     
 df = pd.DataFrame({
-    'batch_size':32,
+    'batch_size':batch_sizes,
     'named_list':named_list,
     'epoch':epoch_list,
     'train_accuracy':accuracy_list,
     'train_loss': loss_list,
     'validation_accuracy': validation_acc_list,
     'validation_loss':validation_loss_list
-}).to_csv('training_details2.csv', index=False, header=True)
+}).to_csv('training_details3.csv', index=False, header=True)
 
     # 3. Load the best model after training finishes
     # model.load_state_dict(torch.load('best_gimatag_model.pth'))
@@ -311,7 +312,7 @@ df = pd.DataFrame({
     'train_loss': loss_list,
     'validation_accuracy': validation_acc_list,
     'validation_loss':validation_loss_list
-}).to_csv('training_details2.csv', index=False, header=True)
+}).to_csv('training_details3.csv', index=False, header=True)
 
 
 # result = pd.DataFrame({
