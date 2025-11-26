@@ -1,10 +1,15 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import transforms
 from torchvision import datasets
 from torch.utils.data import DataLoader
+
+# For model evaulation
+import numpy as np
+import pandas as pd
+from sklearn.metrics import confusion_matrix, classification_report
+import seaborn as sns
 
 train_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -160,7 +165,7 @@ torch.backends.cudnn.benchmark = True
 criterion = nn.CrossEntropyLoss()              # handles softmax internally
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
-early_stopper = EarlyStopper(patience=5)
+early_stopper = EarlyStopper(patience=5, min_delta=1e-04)
 
 print('Starting model training...')
 
@@ -179,83 +184,121 @@ print('Starting model training...')
 
     # print(f"Epoch {epoch+1}: Loss = {loss.item():.4f}")
 
-num_epochs = 50
-for epoch in range(1, num_epochs + 1):
-    model.train()
-    running_loss = 0.0
-    correct = 0
-    total = 0
-    
-    for batch_idx, (inputs, labels) in enumerate(train_loader, 1):
-        inputs, labels = inputs.to(device), labels.to(device)
+# Things to consider: Batch sizes from 16 and 64 as well as  dropout rates
+# reducing dropout (0.1–0.3) if underfitting
+# increasing dropout (0.5–0.6) if overfitting
 
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+learning_rates = [1e-03, 3e-04, 1e-04, 3e-05, 1e-05]
 
-        running_loss += loss.item()
-        _, predicted = outputs.max(1)
-        total += labels.size(0)
-        correct += predicted.eq(labels).sum().item()
+batch_sizes = [32]
+named_list = []
+accuracy_list = []
+loss_list = []
+validation_acc_list = []
+validation_loss_list = []
+epoch_list = []
 
-        # Print every 10 batches
-        if batch_idx % 10 == 0:
-            print(f'Epoch [{epoch}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], '
-                  f'Loss: {running_loss / batch_idx:.4f}, '
-                  f'Accuracy: {100 * correct / total:.2f}%')
+for i in range(len(learning_rates)):
+    optimizer = optim.Adam(model.parameters(), lr=learning_rates[i])
+    num_epochs = 50
 
-    # Validation after each epoch
-    model.eval()
-    val_loss = 0.0
-    val_correct = 0
-    val_total = 0
-    with torch.no_grad():
-        for inputs, labels in val_loader:
+    for epoch in range(1, num_epochs + 1):
+        model.train()
+        named_list.append(f'{learning_rates[i]}')
+        epoch_list.append(epoch)
+
+        running_loss = 0.0
+        correct = 0
+        total = 0
+        
+        for batch_idx, (inputs, labels) in enumerate(train_loader, 1):
             inputs, labels = inputs.to(device), labels.to(device)
+
+            optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, labels)
-            val_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
             _, predicted = outputs.max(1)
-            val_total += labels.size(0)
-            val_correct += predicted.eq(labels).sum().item()
+            total += labels.size(0)
+            correct += predicted.eq(labels).sum().item()
+
+            # Print every 10 batches
+            if batch_idx % 10 == 0:
+                print(f'Epoch [{epoch}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], '
+                    f'Loss: {running_loss / batch_idx:.4f}, '
+                    f'Accuracy: {100 * correct / total:.2f}%')
+
+        # Gets the epoch's overall accuracy and average loss
+        accuracy_list.append(100 * correct / total)
+        loss_list.append(running_loss / len(train_loader))
+
+        # Validation after each epoch
+        model.eval()
+        val_loss = 0.0
+        val_correct = 0
+        val_total = 0
+        with torch.no_grad():
+            for inputs, labels in val_loader:
+                inputs, labels = inputs.to(device), labels.to(device)
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+                val_loss += loss.item()
+                _, predicted = outputs.max(1)
+                val_total += labels.size(0)
+                val_correct += predicted.eq(labels).sum().item()
+            
+        avg_val_loss = val_loss / len(val_loader)
+        val_accuracy = 100 * val_correct / val_total
+
+        print(f'Learning Rate: {learning_rates[i]}'
+            f'Epoch [{epoch}/{num_epochs}] completed. '
+            f'Validation Loss: {avg_val_loss:.4f}, '
+            f'Validation Accuracy: {val_accuracy:.2f}%\n')
         
-    avg_val_loss = val_loss / len(val_loader)
+        validation_acc_list.append(val_accuracy)
+        validation_loss_list.append(avg_val_loss)
 
-    print(f'Epoch [{epoch}/{num_epochs}] completed. '
-          f'Validation Loss: {avg_val_loss:.4f}, '
-          f'Validation Accuracy: {100 * val_correct / val_total:.2f}%\n')
-    
-    if early_stopper.check_stop(avg_val_loss):
-        print(f"🛑 Early stopping triggered after {epoch+1} epochs!")
-        break # Exit the training loop
+        if early_stopper.check_stop(avg_val_loss):
+            print(f"🛑 Early stopping triggered after {epoch+1} epochs!")
+            break # Exit the training loop
 
-# 3. Load the best model after training finishes
-model.load_state_dict(torch.load('best_gimatag_model.pth'))
-print("Loaded the best performing model from 'best_gimatag_model.pth'.")
+    # 3. Load the best model after training finishes
+    model.load_state_dict(torch.load('best_gimatag_model.pth'))
+    print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
-# Prediction
-model.eval()
-total_correct = 0
-total_labels = 0
-predicted_labels = None
+    # Prediction
+    model.eval()
+    total_correct = 0
+    total_labels = 0
+    predicted_labels = []
+    all_labels = []
 
-with torch.no_grad():
-    for images, labels in test_loader:
-        images = images.to(device)
-        labels = labels.to(device)
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images = images.to(device)
+            labels = labels.to(device)
 
-        output = model(images)
-        _, predicted = output.max(1)
+            output = model(images)
+            _, predicted = output.max(1)
 
-        if not predicted_labels:
-            predicted_labels = predicted
-        else:
-            predicted_labels = torch.cat((predicted_labels, predicted), dim=0)
+            all_labels.append(labels)
+            predicted_labels.append(predicted)
 
-        total_labels += labels.size(0)
-        total_correct += predicted.eq(labels).sum().item()
+            total_labels += labels.size(0)
+            total_correct += predicted.eq(labels).sum().item()
 
-test_accuracy = 100 * (total_correct / total_labels)
-print(f"Test Accuracy: {total_correct}/{total_labels} ({test_accuracy:.2f}%)")
+    test_accuracy = 100 * (total_correct / total_labels)
+    print(f"Test Accuracy: {total_correct}/{total_labels} ({test_accuracy:.2f}%)")
+
+result = pd.DataFrame({
+    'predicted':torch.cat(predicted_labels).cpu().numpy(),
+    'truth':torch.cat(all_labels).cpu().numpy(),
+})
+
+cm = confusion_matrix(result['truth'], result['predicted'])
+print(classification_report(result['truth'], result['predicted']))
+print(cm)
+plot = sns.heatmap(cm, annot=True, cmap='Blues', fmt='g')
