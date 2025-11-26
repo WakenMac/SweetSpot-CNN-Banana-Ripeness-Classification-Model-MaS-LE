@@ -158,14 +158,6 @@ class EarlyStopper:
         return self.should_stop
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = GiMaTagCNN(num_classes=4).to(device)
-# model = torch.compile(model)
-torch.backends.cudnn.benchmark = True
-
-criterion = nn.CrossEntropyLoss()              # handles softmax internally
-optimizer = optim.Adam(model.parameters(), lr=1e-3)
-
-early_stopper = EarlyStopper(patience=5, min_delta=1e-04)
 
 print('Starting model training...')
 
@@ -188,9 +180,11 @@ print('Starting model training...')
 # reducing dropout (0.1–0.3) if underfitting
 # increasing dropout (0.5–0.6) if overfitting
 
-learning_rates = [1e-03, 3e-04, 1e-04, 3e-05, 1e-05]
+# Original
+# learning_rates = [1e-03, 3e-04, 1e-04, 3e-05, 1e-05]
+learning_rates = [3e-04, 1e-04, 3e-05, 1e-05]
 
-batch_sizes = [32]
+batch_sizes = 32
 named_list = []
 accuracy_list = []
 loss_list = []
@@ -199,7 +193,13 @@ validation_loss_list = []
 epoch_list = []
 
 for i in range(len(learning_rates)):
+    model = GiMaTagCNN(num_classes=4).to(device)
+    # model = torch.compile(model)
+    torch.backends.cudnn.benchmark = True
+
+    criterion = nn.CrossEntropyLoss()              # handles softmax internally
     optimizer = optim.Adam(model.parameters(), lr=learning_rates[i])
+    early_stopper = EarlyStopper(patience=5, min_delta=1e-04)
     num_epochs = 50
 
     for epoch in range(1, num_epochs + 1):
@@ -253,7 +253,7 @@ for i in range(len(learning_rates)):
         avg_val_loss = val_loss / len(val_loader)
         val_accuracy = 100 * val_correct / val_total
 
-        print(f'Learning Rate: {learning_rates[i]}'
+        print(f'Learning Rate: {learning_rates[i]}, '
             f'Epoch [{epoch}/{num_epochs}] completed. '
             f'Validation Loss: {avg_val_loss:.4f}, '
             f'Validation Accuracy: {val_accuracy:.2f}%\n')
@@ -264,41 +264,62 @@ for i in range(len(learning_rates)):
         if early_stopper.check_stop(avg_val_loss, learning_rates[i]):
             print(f"🛑 Early stopping triggered after {epoch+1} epochs!")
             break # Exit the training loop
+    
+df = pd.DataFrame({
+    'batch_size':32,
+    'named_list':named_list,
+    'epoch':epoch_list,
+    'train_accuracy':accuracy_list,
+    'train_loss': loss_list,
+    'validation_accuracy': validation_acc_list,
+    'validation_loss':validation_loss_list
+}).to_csv('training_details2.csv', index=False, header=True)
 
     # 3. Load the best model after training finishes
-    model.load_state_dict(torch.load('best_gimatag_model.pth'))
-    print("Loaded the best performing model from 'best_gimatag_model.pth'.")
+    # model.load_state_dict(torch.load('best_gimatag_model.pth'))
+    # print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
-    # Prediction
-    model.eval()
-    total_correct = 0
-    total_labels = 0
-    predicted_labels = []
-    all_labels = []
+    # # Prediction
+    # model.eval()
+    # total_correct = 0
+    # total_labels = 0
+    # predicted_labels = []
+    # all_labels = []
 
-    with torch.no_grad():
-        for images, labels in test_loader:
-            images = images.to(device)
-            labels = labels.to(device)
+    # with torch.no_grad():
+    #     for images, labels in test_loader:
+    #         images = images.to(device)
+    #         labels = labels.to(device)
 
-            output = model(images)
-            _, predicted = output.max(1)
+    #         output = model(images)
+    #         _, predicted = output.max(1)
 
-            all_labels.append(labels)
-            predicted_labels.append(predicted)
+    #         all_labels.append(labels)
+    #         predicted_labels.append(predicted)
 
-            total_labels += labels.size(0)
-            total_correct += predicted.eq(labels).sum().item()
+    #         total_labels += labels.size(0)
+    #         total_correct += predicted.eq(labels).sum().item()
 
-    test_accuracy = 100 * (total_correct / total_labels)
-    print(f"Test Accuracy: {total_correct}/{total_labels} ({test_accuracy:.2f}%)")
+    # test_accuracy = 100 * (total_correct / total_labels)
+    # print(f"Test Accuracy: {total_correct}/{total_labels} ({test_accuracy:.2f}%)")
 
-result = pd.DataFrame({
-    'predicted':torch.cat(predicted_labels).cpu().numpy(),
-    'truth':torch.cat(all_labels).cpu().numpy(),
-})
+df = pd.DataFrame({
+    'batch_size':32,
+    'named_list':named_list,
+    'epoch':epoch_list,
+    'train_accuracy':accuracy_list,
+    'train_loss': loss_list,
+    'validation_accuracy': validation_acc_list,
+    'validation_loss':validation_loss_list
+}).to_csv('training_details2.csv', index=False, header=True)
 
-cm = confusion_matrix(result['truth'], result['predicted'])
-print(classification_report(result['truth'], result['predicted']))
-print(cm)
-plot = sns.heatmap(cm, annot=True, cmap='Blues', fmt='g')
+
+# result = pd.DataFrame({
+#     'predicted':torch.cat(predicted_labels).cpu().numpy(),
+#     'truth':torch.cat(all_labels).cpu().numpy(),
+# })
+
+# cm = confusion_matrix(result['truth'], result['predicted'])
+# print(classification_report(result['truth'], result['predicted']))
+# print(cm)
+# plot = sns.heatmap(cm, annot=True, cmap='Blues', fmt='g')
