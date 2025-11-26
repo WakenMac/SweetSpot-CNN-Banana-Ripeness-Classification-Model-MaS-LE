@@ -141,13 +141,13 @@ class EarlyStopper:
         self.best_validation_loss = float('inf')
         self.should_stop = False
 
-    def check_stop(self, validation_loss):
+    def check_stop(self, validation_loss, learning_rate):
         if validation_loss < self.best_validation_loss - self.min_delta:
             # Improvement found! Reset counter and update best loss
             self.best_validation_loss = validation_loss
             self.counter = 0
             # Save the current best model
-            torch.save(model.state_dict(), 'Saved Models\\best_gimatag_model.pth')
+            torch.save(model.state_dict(), f'Saved Models\\best_gimatag_model_{learning_rate}.pth')
             print("Validation loss improved. Model saved.")
         else:
             # No improvement
@@ -261,7 +261,7 @@ for i in range(len(learning_rates)):
         validation_acc_list.append(val_accuracy)
         validation_loss_list.append(avg_val_loss)
 
-        if early_stopper.check_stop(avg_val_loss):
+        if early_stopper.check_stop(avg_val_loss, learning_rates[i]):
             print(f"🛑 Early stopping triggered after {epoch+1} epochs!")
             break # Exit the training loop
 
