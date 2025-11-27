@@ -64,7 +64,6 @@ test_loader = DataLoader(
     pin_memory=True
 )
 
-
 class GiMaTagCNN(nn.Module):
     def __init__(self, num_classes=4):
         super(GiMaTagCNN, self).__init__()
@@ -181,8 +180,8 @@ print('Starting model training...')
 # increasing dropout (0.5–0.6) if overfitting
 
 # Original
-# learning_rates = [1e-03]
-learning_rates = [1e-03, 3e-04, 1e-04, 3e-05, 1e-05]
+learning_rates = [3e-05]
+# learning_rates = [1e-03, 3e-04, 1e-04, 3e-05, 1e-05]
 # learning_rates = [3e-04, 1e-04, 3e-05, 1e-05]
 
 batch_sizes = 64
@@ -195,15 +194,16 @@ epoch_list = []
 
 for i in range(len(learning_rates)):
     model = GiMaTagCNN(num_classes=4).to(device)
+    model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_64_3e-05.pth'))
     # model = torch.compile(model)
     torch.backends.cudnn.benchmark = True
 
     criterion = nn.CrossEntropyLoss()              # handles softmax internally
     optimizer = optim.Adam(model.parameters(), lr=learning_rates[i])
     early_stopper = EarlyStopper(patience=5, min_delta=1e-04)
-    num_epochs = 50
+    num_epochs = 70
 
-    for epoch in range(1, num_epochs + 1):
+    for epoch in range(50, num_epochs + 1):
         model.train()
         named_list.append(f'{learning_rates[i]}')
         epoch_list.append(epoch)
@@ -274,7 +274,7 @@ df = pd.DataFrame({
     'train_loss': loss_list,
     'validation_accuracy': validation_acc_list,
     'validation_loss':validation_loss_list
-}).to_csv('training_details3.csv', index=False, header=True)
+}).to_csv('training_details5.csv', index=False, header=True)
 
 # 3. Load the best model after training finishes
 model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_0.001.pth'))
