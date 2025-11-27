@@ -141,13 +141,13 @@ class EarlyStopper:
         self.best_validation_loss = float('inf')
         self.should_stop = False
 
-    def check_stop(self, validation_loss, learning_rate):
+    def check_stop(self, validation_loss, learning_rate, batch_size):
         if validation_loss < self.best_validation_loss - self.min_delta:
             # Improvement found! Reset counter and update best loss
             self.best_validation_loss = validation_loss
             self.counter = 0
             # Save the current best model
-            torch.save(model.state_dict(), f'Saved Models\\best_gimatag_model_{learning_rate}.pth')
+            torch.save(model.state_dict(), f'Saved Models\\best_gimatag_model_{batch_size}_{learning_rate}.pth')
             print("Validation loss improved. Model saved.")
         else:
             # No improvement
@@ -262,7 +262,7 @@ for i in range(len(learning_rates)):
         validation_acc_list.append(val_accuracy)
         validation_loss_list.append(avg_val_loss)
 
-        if early_stopper.check_stop(avg_val_loss, learning_rates[i]):
+        if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_sizes):
             print(f"🛑 Early stopping triggered after {epoch} epochs!")
             break # Exit the training loop
     
@@ -276,51 +276,42 @@ df = pd.DataFrame({
     'validation_loss':validation_loss_list
 }).to_csv('training_details3.csv', index=False, header=True)
 
-    # 3. Load the best model after training finishes
-    # model.load_state_dict(torch.load('best_gimatag_model.pth'))
-    # print("Loaded the best performing model from 'best_gimatag_model.pth'.")
+# 3. Load the best model after training finishes
+model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_0.001.pth'))
+print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
-    # # Prediction
-    # model.eval()
-    # total_correct = 0
-    # total_labels = 0
-    # predicted_labels = []
-    # all_labels = []
+# Prediction
+model.eval()
+total_correct = 0
+total_labels = 0
+predicted_labels = []
+all_labels = []
 
-    # with torch.no_grad():
-    #     for images, labels in test_loader:
-    #         images = images.to(device)
-    #         labels = labels.to(device)
+with torch.no_grad():
+    print('Starting model evaluation now.')
+    for images, labels in test_loader:
+        images = images.to(device)
+        labels = labels.to(device)
 
-    #         output = model(images)
-    #         _, predicted = output.max(1)
+        output = model(images)
+        _, predicted = output.max(1)
 
-    #         all_labels.append(labels)
-    #         predicted_labels.append(predicted)
+        all_labels.append(labels)
+        predicted_labels.append(predicted)
 
-    #         total_labels += labels.size(0)
-    #         total_correct += predicted.eq(labels).sum().item()
+        total_labels += labels.size(0)
+        total_correct += predicted.eq(labels).sum().item()
 
-    # test_accuracy = 100 * (total_correct / total_labels)
-    # print(f"Test Accuracy: {total_correct}/{total_labels} ({test_accuracy:.2f}%)")
-
-df = pd.DataFrame({
-    'batch_size':32,
-    'named_list':named_list,
-    'epoch':epoch_list,
-    'train_accuracy':accuracy_list,
-    'train_loss': loss_list,
-    'validation_accuracy': validation_acc_list,
-    'validation_loss':validation_loss_list
-}).to_csv('training_details3.csv', index=False, header=True)
+test_accuracy = 100 * (total_correct / total_labels)
+print(f"Test Accuracy: {total_correct}/{total_labels} ({test_accuracy:.2f}%)")
 
 
-# result = pd.DataFrame({
-#     'predicted':torch.cat(predicted_labels).cpu().numpy(),
-#     'truth':torch.cat(all_labels).cpu().numpy(),
-# })
+result = pd.DataFrame({
+    'predicted':torch.cat(predicted_labels).cpu().numpy(),
+    'truth':torch.cat(all_labels).cpu().numpy(),
+})
 
-# cm = confusion_matrix(result['truth'], result['predicted'])
-# print(classification_report(result['truth'], result['predicted']))
-# print(cm)
-# plot = sns.heatmap(cm, annot=True, cmap='Blues', fmt='g')
+cm = confusion_matrix(result['truth'], result['predicted'])
+print(classification_report(result['truth'], result['predicted']))
+print(cm)
+plot = sns.heatmap(cm, annot=True, cmap='Blues', fmt='g')
