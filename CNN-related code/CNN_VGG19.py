@@ -4,12 +4,14 @@ import torch.optim as optim
 from torchvision import transforms
 from torchvision import datasets
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 # For model evaulation
 import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
+import matplotlib.pyplot as plt
 
 train_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -93,7 +95,7 @@ class GiMaTagCNN(nn.Module):
             nn.ReLU(),
 
             nn.MaxPool2d(kernel_size=2),
-            nn.Dropout(0.25)
+            nn.Dropout(0.3)
         )
 
         # --- Block 3 ---
@@ -114,7 +116,7 @@ class GiMaTagCNN(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(flattened_size, 64),
             nn.ReLU(),
-            nn.Dropout(0.50),
+            nn.Dropout(0.55),
 
             nn.Linear(64, num_classes)
             # No softmax — PyTorch's CrossEntropyLoss expects raw logits
@@ -140,13 +142,15 @@ class EarlyStopper:
         self.best_validation_loss = float('inf')
         self.should_stop = False
 
-    def check_stop(self, validation_loss, learning_rate, batch_size):
+    def check_stop(self, validation_loss, learning_rate, batch_size, index):
+        weight_decay = 'wd' if index == 1 else 'no_wd'
         if validation_loss < self.best_validation_loss - self.min_delta:
             # Improvement found! Reset counter and update best loss
             self.best_validation_loss = validation_loss
             self.counter = 0
             # Save the current best model
-            torch.save(model.state_dict(), f'Saved Models\\best_gimatag_model_{batch_size}_{learning_rate}.pth')
+            # torch.save(model.state_dict(), f'Saved Models\\best_gimatag_model_2_{batch_size}_{learning_rate}.pth')
+            torch.save(model.state_dict(), f'Saved Models\\best_gimatag_model_{weight_decay}_{batch_size}_{learning_rate}.pth')
             print("Validation loss improved. Model saved.")
         else:
             # No improvement
@@ -182,6 +186,8 @@ print('Starting model training...')
 # Original
 learning_rates = [3e-05]
 # learning_rates = [1e-03, 3e-04, 1e-04, 3e-05, 1e-05]
+# learning_rates = [2e-03, 6e-04, 2e-04, 6e-05, 2e-05]
+# learning_rates = [4e-03, 9e-04, 4e-04, 9e-05, 4e-05]
 # learning_rates = [3e-04, 1e-04, 3e-05, 1e-05]
 
 batch_sizes = 64
@@ -191,21 +197,46 @@ loss_list = []
 validation_acc_list = []
 validation_loss_list = []
 epoch_list = []
+with_ReduceLROnPlateau = True
+with_weight_deacy = []
 
-for i in range(len(learning_rates)):
-    model = GiMaTagCNN(num_classes=4).to(device)
+for i in range(len(learning_rates) + 1):
+    model = GiMaTagCNN(num_classes=4)
     model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_64_3e-05.pth'))
+    model.to(device)
     # model = torch.compile(model)
     torch.backends.cudnn.benchmark = True
 
     criterion = nn.CrossEntropyLoss()              # handles softmax internally
-    optimizer = optim.Adam(model.parameters(), lr=learning_rates[i])
-    early_stopper = EarlyStopper(patience=5, min_delta=1e-04)
-    num_epochs = 70
+
+    optimizer = None
+    if i == 1:
+        optimizer = optim.Adam(
+            model.parameters(), 
+            # lr=learning_rates[i],
+            lr=3e-05,
+            weight_decay=1e-5
+        )
+    else:
+        optimizer = optim.Adam(
+            model.parameters(), 
+            lr=3e-05
+        )
+    early_stopper = EarlyStopper(patience=8, min_delta=1e-04)
+    scheduler = ReduceLROnPlateau(
+        optimizer = optimizer,
+        mode='min',
+        factor=0.1,
+        patience=4,
+        # min_lr=learning_rates[i] / 100
+        min_lr=3e-05 / 100
+    )
+    num_epochs = 100
 
     for epoch in range(50, num_epochs + 1):
         model.train()
-        named_list.append(f'{learning_rates[i]}')
+        # named_list.append(f'{learning_rates[i]}')
+        named_list.append(f'{3e-05}')
         epoch_list.append(epoch)
 
         running_loss = 0.0
@@ -254,15 +285,20 @@ for i in range(len(learning_rates)):
         avg_val_loss = val_loss / len(val_loader)
         val_accuracy = 100 * val_correct / val_total
 
-        print(f'Learning Rate: {learning_rates[i]}, '
+        # print(f'Learning Rate: {learning_rates[i]}, '
+        print(f'Learning Rate: {optimizer.param_groups[0]["lr"]}, '
             f'Epoch [{epoch}/{num_epochs}] completed. '
             f'Validation Loss: {avg_val_loss:.4f}, '
             f'Validation Accuracy: {val_accuracy:.2f}%\n')
         
         validation_acc_list.append(val_accuracy)
         validation_loss_list.append(avg_val_loss)
+        with_weight_deacy.append(True if i == 1 else False)
 
-        if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_sizes):
+        scheduler.step(avg_val_loss)
+
+        # if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_sizes):
+        if early_stopper.check_stop(avg_val_loss, 3e-05, batch_sizes, i):
             print(f"🛑 Early stopping triggered after {epoch} epochs!")
             break # Exit the training loop
     
@@ -273,11 +309,15 @@ df = pd.DataFrame({
     'train_accuracy':accuracy_list,
     'train_loss': loss_list,
     'validation_accuracy': validation_acc_list,
-    'validation_loss':validation_loss_list
-}).to_csv('training_details5.csv', index=False, header=True)
+    'validation_loss':validation_loss_list,
+    'with_ReduceLROnPlateau':with_ReduceLROnPlateau,
+    'with_weight_deacay':with_weight_deacy
+}).to_csv('training_details7.csv', index=False, header=True)
 
 # 3. Load the best model after training finishes
-model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_0.001.pth'))
+model = GiMaTagCNN(num_classes=4).to(device)
+# model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_2_64_3e-05.pth'))
+model.load_state_dict(torch.load('Saved Models\\USE-THIS-DAVE_best_gimatag_model_wd_64_3e-05.pth'))
 print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
 # Prediction
@@ -305,7 +345,6 @@ with torch.no_grad():
 test_accuracy = 100 * (total_correct / total_labels)
 print(f"Test Accuracy: {total_correct}/{total_labels} ({test_accuracy:.2f}%)")
 
-
 result = pd.DataFrame({
     'predicted':torch.cat(predicted_labels).cpu().numpy(),
     'truth':torch.cat(all_labels).cpu().numpy(),
@@ -314,4 +353,7 @@ result = pd.DataFrame({
 cm = confusion_matrix(result['truth'], result['predicted'])
 print(classification_report(result['truth'], result['predicted']))
 print(cm)
+plt.clf()
 plot = sns.heatmap(cm, annot=True, cmap='Blues', fmt='g')
+plt.xticks([0.5, 1.5, 2.5, 3.5], ['Overripe', 'Ripe', 'Rotten', 'Unripe'])
+plt.yticks([0.5, 1.5, 2.5, 3.5], ['Overripe', 'Ripe', 'Rotten', 'Unripe'])
