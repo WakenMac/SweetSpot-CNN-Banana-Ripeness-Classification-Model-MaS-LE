@@ -161,20 +161,17 @@ learning_rates = [1e-03, 1e-04, 1e-05]
 # learning_rates = [4e-03, 9e-04, 4e-04, 9e-05, 4e-05]
 # learning_rates = [3e-04, 1e-04, 3e-05, 1e-05]
 
-batch_sizes = 64
-named_list = []
-accuracy_list = []
-loss_list = []
-validation_acc_list = []
-validation_loss_list = []
-epoch_list = []
-with_ReduceLROnPlateau = True
-with_weight_deacy = []
-
 datasets = [train_ds, test_ds, val_ds]
 
 for batch_size in batch_size_list:
-    batch_sizes = batch_size
+    named_list = []
+    accuracy_list = []
+    loss_list = []
+    validation_acc_list = []
+    validation_loss_list = []
+    epoch_list = []
+    with_ReduceLROnPlateau = True
+    with_weight_deacy = []
 
     [train_loader, test_loader, val_loader] = [
         DataLoader(
@@ -201,7 +198,7 @@ for batch_size in batch_size_list:
             lr=learning_rates[i],
             weight_decay=1e-4
         )
-        
+
         early_stopper = EarlyStopper(patience=8, min_delta=1e-04)
         scheduler = ReduceLROnPlateau(
             optimizer = optimizer,
@@ -278,7 +275,7 @@ for batch_size in batch_size_list:
             scheduler.step(avg_val_loss)
 
             # if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_sizes):
-            if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_sizes, i):
+            if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_size, i):
                 print(f"🛑 Early stopping triggered after {epoch} epochs!")
                 break # Exit the training loop
         
@@ -288,7 +285,7 @@ for batch_size in batch_size_list:
         #             'with_weight_decay']).to_csv('training_details8.csv')
 
         df = pd.DataFrame({
-            'batch_size':batch_sizes,
+            'batch_size':batch_size,
             'learning_rate':named_list,
             'epoch':epoch_list,
             'train_accuracy':accuracy_list,
