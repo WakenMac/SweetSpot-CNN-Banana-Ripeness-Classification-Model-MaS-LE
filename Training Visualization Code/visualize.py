@@ -60,3 +60,5 @@ main_dataset.to_csv('main_dataset.csv', index=False)
 subset = main_dataset[np.logical_and(main_dataset['batch_size'] == 64, main_dataset['learning_rate'] == 1e-03)]
 plot_losses(subset)
 plot_accuracy(subset)
+
+

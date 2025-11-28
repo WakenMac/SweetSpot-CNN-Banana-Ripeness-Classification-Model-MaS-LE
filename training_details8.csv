@@ -1,0 +1,1 @@
+Unnamed: 0,batch_size,learning_rate,epoch,train_accuracy,train_loss,validation_accuracy,validation_loss,with_ReduceLROnPlateau,with_weight_decay
