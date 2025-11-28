@@ -99,41 +99,9 @@ class EarlyStopper:
                 self.should_stop = True
         return self.should_stop
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-class EarlyStopper:
-    def __init__(self, patience=5, min_delta=0):
-        # patience: How many epochs to wait after the last best result
-        self.patience = patience
-        # min_delta: Minimum change to qualify as an improvement
-        self.min_delta = min_delta
-        
-        self.counter = 0
-        self.best_validation_loss = float('inf')
-        self.should_stop = False
-
-    def check_stop(self, validation_loss, learning_rate, batch_size, index):
-        weight_decay = 'wd' if index == 1 else 'no_wd'
-        if validation_loss < self.best_validation_loss - self.min_delta:
-            # Improvement found! Reset counter and update best loss
-            self.best_validation_loss = validation_loss
-            self.counter = 0
-            # Save the current best model
-            # torch.save(model.state_dict(), f'Saved Models\\best_gimatag_model_2_{batch_size}_{learning_rate}.pth')
-            torch.save(model.state_dict(), f'Saved Models\\best_gimatag_model_{weight_decay}_{batch_size}_{str(learning_rate)}.pth')
-            print("Validation loss improved. Model saved.")
-        else:
-            # No improvement
-            self.counter += 1
-            print(f"EarlyStopping counter: {self.counter} of {self.patience}")
-            if self.counter >= self.patience:
-                self.should_stop = True
-        return self.should_stop
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 print('Starting model training...')
 
+# Basic technique for training the model without validation accuracy
 # for epoch in range(50):
     # model.train()
     # for images, labels in train_loader:
@@ -155,13 +123,16 @@ print('Starting model training...')
 
 # Original
 # learning_rates = [3e-05]
-batch_size_list = [32, 64, 128]
+batch_size_list = [32, 128]
 learning_rates = [1e-03, 1e-04, 1e-05]
 # learning_rates = [2e-03, 6e-04, 2e-04, 6e-05, 2e-05]
 # learning_rates = [4e-03, 9e-04, 4e-04, 9e-05, 4e-05]
 # learning_rates = [3e-04, 1e-04, 3e-05, 1e-05]
 
 datasets = [train_ds, test_ds, val_ds]
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+continue_value = 0
 
 for batch_size in batch_size_list:
     named_list = []
@@ -171,18 +142,37 @@ for batch_size in batch_size_list:
     validation_loss_list = []
     epoch_list = []
     with_ReduceLROnPlateau = True
-    with_weight_deacy = []
+    with_weight_deacy = True
 
-    [train_loader, test_loader, val_loader] = [
-        DataLoader(
-            dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            num_workers=6,
-            pin_memory=True
-        ) for dataset in datasets]
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=6,            # like prefetching: loads data in parallel
+        pin_memory=True           # speeds up GPU transfer
+    )
+
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=6,
+        pin_memory=True
+    )
+
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=6,
+        pin_memory=True
+    )
 
     for i in range(len(learning_rates) + 1):
+        if continue_value < 2:
+            continue_value += 1
+            continue
+
         # For training from scratch
         model = VGG19Transfer(num_classes=4)
 
@@ -208,13 +198,14 @@ for batch_size in batch_size_list:
             # min_lr=learning_rates[i] / 100
             min_lr=learning_rates[i] / 100
         )
-        num_epochs = 100
+        num_epochs = 50
 
-        for epoch in range(50, num_epochs + 1):
+        for epoch in range(1, num_epochs + 1):
             model.train()
             # named_list.append(f'{learning_rates[i]}')
-            named_list.append(f'{str(learning_rates[i])}')
-            epoch_list.append(epoch)
+            # named_list.append(f'{str(learning_rates[i])}')
+            named_list = str(learning_rates[i])
+            epoch_list = epoch
 
             running_loss = 0.0
             correct = 0
@@ -270,34 +261,33 @@ for batch_size in batch_size_list:
             
             validation_acc_list.append(val_accuracy)
             validation_loss_list.append(avg_val_loss)
-            with_weight_deacy.append(True if i == 1 else False)
 
             scheduler.step(avg_val_loss)
 
             # if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_sizes):
-            if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_size, i):
+            if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_size):
                 print(f"🛑 Early stopping triggered after {epoch} epochs!")
                 break # Exit the training loop
         
-        # Creating the template for training_details9.csv
-        # pd.DataFrame(None, None, ['batch_size', 'learning_rate', 'epoch', 'train_accuracy', 'train_loss',
-        #             'validation_accuracy', 'validation_loss', 'with_ReduceLROnPlateau',
-        #             'with_weight_decay']).to_csv('training_details8.csv')
+            # Creating the template for training_details9.csv
+            # pd.DataFrame(None, None, ['model', 'batch_size', 'learning_rate', 'epoch', 'train_accuracy', 'train_loss',
+            #             'validation_accuracy', 'validation_loss', 'with_ReduceLROnPlateau',
+            #             'with_weight_decay']).to_csv('training_details8.csv', index=False)
 
-        df = pd.DataFrame({
-            'batch_size':batch_size,
-            'learning_rate':named_list,
-            'epoch':epoch_list,
-            'train_accuracy':accuracy_list,
-            'train_loss': loss_list,
-            'validation_accuracy': validation_acc_list,
-            'validation_loss':validation_loss_list,
-            'with_ReduceLROnPlateau':with_ReduceLROnPlateau,
-            'with_weight_decay':with_weight_deacy
-        })
-        df['batch_size'] = named_list
+            df = pd.DataFrame({
+                'model':'VGG19',
+                'batch_size':batch_size,
+                'learning_rate':str(named_list),
+                'epoch':epoch_list,
+                'train_accuracy':accuracy_list,
+                'train_loss': loss_list,
+                'validation_accuracy': validation_acc_list,
+                'validation_loss':validation_loss_list,
+                'with_ReduceLROnPlateau':with_ReduceLROnPlateau,
+                'with_weight_decay':with_weight_deacy
+            })
 
-        pd.concat([pd.read_csv('training_details8.csv'), df], axis=0, ignore_index=True).to_csv('training_details8.csv', index=False)
+            pd.concat([pd.read_csv('training_details8.csv'), df], axis=0, ignore_index=True).to_csv('training_details8.csv', index=False)
 
 # 3. Load the best model after training finishes
 model = VGG19Transfer(num_classes=4).to(device)
