@@ -123,11 +123,18 @@ print('Starting model training...')
 
 # Original
 # learning_rates = [3e-05]
-batch_size_list = [32, 128]
-learning_rates = [1e-03, 1e-04, 1e-05]
+
+# batch_size_list = [128]
+# learning_rates = [1e-03, 1e-04, 1e-05]
+
+batch_size_list = [64]
+learning_rates = [1e-04]
+
 # learning_rates = [2e-03, 6e-04, 2e-04, 6e-05, 2e-05]
 # learning_rates = [4e-03, 9e-04, 4e-04, 9e-05, 4e-05]
 # learning_rates = [3e-04, 1e-04, 3e-05, 1e-05]
+
+# One 64 model is reduced by 0.1 once, 43 epochs start
 
 datasets = [train_ds, test_ds, val_ds]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -168,16 +175,12 @@ for batch_size in batch_size_list:
         pin_memory=True
     )
 
-    for i in range(len(learning_rates) + 1):
-        if continue_value < 2:
-            continue_value += 1
-            continue
-
+    for i in range(len(learning_rates)):
         # For training from scratch
         model = VGG19Transfer(num_classes=4)
 
         # For fine-tuning
-        # model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_64_3e-05.pth'))
+        model.load_state_dict(torch.load('Saved Models\\vgg_19_model_64_0.0001(0.1).pth'))
         model.to(device)
         # model = torch.compile(model)
         torch.backends.cudnn.benchmark = True
@@ -185,7 +188,7 @@ for batch_size in batch_size_list:
         criterion = nn.CrossEntropyLoss()              # handles softmax internally
         optimizer = optim.Adam(
             model.parameters(), 
-            lr=learning_rates[i],
+            lr=learning_rates[i] * 0.1,
             weight_decay=1e-4
         )
 
@@ -200,7 +203,7 @@ for batch_size in batch_size_list:
         )
         num_epochs = 50
 
-        for epoch in range(1, num_epochs + 1):
+        for epoch in range(43, num_epochs + 1):
             model.train()
             # named_list.append(f'{learning_rates[i]}')
             # named_list.append(f'{str(learning_rates[i])}')
@@ -287,7 +290,7 @@ for batch_size in batch_size_list:
                 'with_weight_decay':with_weight_deacy
             })
 
-            pd.concat([pd.read_csv('training_details8.csv'), df], axis=0, ignore_index=True).to_csv('training_details8.csv', index=False)
+            pd.concat([pd.read_csv('training_details9(64).csv'), df], axis=0, ignore_index=True).to_csv('training_details9(64).csv', index=False)
 
 # 3. Load the best model after training finishes
 model = VGG19Transfer(num_classes=4).to(device)
