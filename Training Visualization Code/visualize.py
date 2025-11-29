@@ -50,26 +50,30 @@ def plot_accuracy(subset):
     plt.tight_layout()
 
 main_dataset = pd.read_csv('main_dataset.csv')
-main_dataset['with_ReduceLROnPlateau'] = False
-main_dataset['with_weight_decay'] = False
-main_dataset['model'] = 'GiMaTag'
 main_dataset = main_dataset[['model', 'batch_size', 'learning_rate', 'epoch', 'train_accuracy', 'train_loss',
 'validation_accuracy', 'validation_loss', 'with_ReduceLROnPlateau',
 'with_weight_decay']]
 main_dataset.sort_values(['validation_accuracy', 'train_accuracy'], ascending=[False, False]).head(12)
 main_dataset.sort_values(['train_accuracy', 'validation_accuracy'], ascending=[False, False]).head(12)
 
-subset = pd.read_csv('training_details7.csv')
+subset = pd.read_csv('training_details9(64).csv')
+subset = subset.iloc[1:, :]
+subset = subset.groupby(['model', 'batch_size', 'learning_rate', 'epoch']).last().reset_index()
+subset.to_csv('temp_details.csv')
+
+subset1 = pd.concat([subset.iloc[1:51, :], subset.iloc[51:101, :], subset.iloc[151:201, :]], axis=0, ignore_index = True)
+
 subset['model'] = 'GiMaTag'
-subset['learning_rate'] = subset['named_list']
-subset['with_weight_decay'] = subset['with_weight_deacay']
-subset.iloc[:, 1] = 3e-05
 subset = subset[['model', 'batch_size', 'learning_rate', 'epoch', 'train_accuracy', 'train_loss',
 'validation_accuracy', 'validation_loss', 'with_ReduceLROnPlateau',
 'with_weight_decay']]
 main_dataset = pd.concat([main_dataset, subset], axis=0, ignore_index=True)
+main_dataset['learning_rate'] = main_dataset['learning_rate'].apply(lambda x: str(x))
+main_dataset.iloc[634:, 1] = 32
+main_dataset.iloc[634:, 2] = str(float(1e-05))
 
-# main_dataset.to_csv('main_dataset.csv', index=False)
+main_dataset.to_csv('temp_details.csv', index=False)
+main_dataset.to_csv('main_dataset.csv', index=False)
 
 subset = main_dataset[np.logical_and(main_dataset['batch_size'] == 64, main_dataset['learning_rate'] == 3e-05)]
 subset = subset[np.logical_or(subset['epoch'] <= 50, np.logical_and(subset['epoch'] > 50, subset['with_weight_decay'] == True))]

@@ -124,11 +124,8 @@ print('Starting model training...')
 # Original
 # learning_rates = [3e-05]
 
-# batch_size_list = [128]
-# learning_rates = [1e-03, 1e-04, 1e-05]
-
-batch_size_list = [64]
-learning_rates = [1e-04]
+batch_size_list = [128]
+learning_rates = [1e-03, 1e-04, 1e-05]
 
 # learning_rates = [2e-03, 6e-04, 2e-04, 6e-05, 2e-05]
 # learning_rates = [4e-03, 9e-04, 4e-04, 9e-05, 4e-05]
@@ -142,15 +139,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 continue_value = 0
 
 for batch_size in batch_size_list:
-    named_list = []
-    accuracy_list = []
-    loss_list = []
-    validation_acc_list = []
-    validation_loss_list = []
-    epoch_list = []
-    with_ReduceLROnPlateau = True
-    with_weight_deacy = True
-
     train_loader = DataLoader(
         train_ds,
         batch_size=batch_size,
@@ -180,7 +168,7 @@ for batch_size in batch_size_list:
         model = VGG19Transfer(num_classes=4)
 
         # For fine-tuning
-        model.load_state_dict(torch.load('Saved Models\\vgg_19_model_64_0.0001(0.1).pth'))
+        # model.load_state_dict(torch.load('Saved Models\\vgg_19_model_64_0.0001(0.1).pth'))
         model.to(device)
         # model = torch.compile(model)
         torch.backends.cudnn.benchmark = True
@@ -188,7 +176,7 @@ for batch_size in batch_size_list:
         criterion = nn.CrossEntropyLoss()              # handles softmax internally
         optimizer = optim.Adam(
             model.parameters(), 
-            lr=learning_rates[i] * 0.1,
+            lr=learning_rates[i],
             weight_decay=1e-4
         )
 
@@ -203,7 +191,16 @@ for batch_size in batch_size_list:
         )
         num_epochs = 50
 
-        for epoch in range(43, num_epochs + 1):
+        for epoch in range(1, num_epochs + 1):
+            named_list = []
+            accuracy_list = []
+            loss_list = []
+            validation_acc_list = []
+            validation_loss_list = []
+            epoch_list = []
+            with_ReduceLROnPlateau = True
+            with_weight_deacy = True
+
             model.train()
             # named_list.append(f'{learning_rates[i]}')
             # named_list.append(f'{str(learning_rates[i])}')
@@ -275,7 +272,7 @@ for batch_size in batch_size_list:
             # Creating the template for training_details9.csv
             # pd.DataFrame(None, None, ['model', 'batch_size', 'learning_rate', 'epoch', 'train_accuracy', 'train_loss',
             #             'validation_accuracy', 'validation_loss', 'with_ReduceLROnPlateau',
-            #             'with_weight_decay']).to_csv('training_details8.csv', index=False)
+            #             'with_weight_decay']).to_csv('training_details10.csv', index=False)
 
             df = pd.DataFrame({
                 'model':'VGG19',
@@ -290,7 +287,7 @@ for batch_size in batch_size_list:
                 'with_weight_decay':with_weight_deacy
             })
 
-            pd.concat([pd.read_csv('training_details9(64).csv'), df], axis=0, ignore_index=True).to_csv('training_details9(64).csv', index=False)
+            pd.concat([pd.read_csv('training_details10.csv'), df], axis=0, ignore_index=True).to_csv('training_details10.csv', index=False)
 
 # 3. Load the best model after training finishes
 model = VGG19Transfer(num_classes=4).to(device)
