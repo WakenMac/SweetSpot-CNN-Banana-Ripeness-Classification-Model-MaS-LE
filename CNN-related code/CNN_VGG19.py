@@ -299,6 +299,13 @@ model = VGG19Transfer(num_classes=4).to(device)
 model.load_state_dict(torch.load('Saved Models\\vgg_19_model_32_0.001.pth'))
 print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
+# Print Model Output Parameters:
+for index, p in enumerate(model.named_parameters()):
+    print(f'Layer #{index + 1} ({p[0]}): {p[1].numel():,}')
+
+# Prints the total number of parameters
+print(f'Total Parameters: {sum([p.numel() for p in model.parameters()]):,}')
+
 # Prediction
 model.eval()
 total_correct = 0
