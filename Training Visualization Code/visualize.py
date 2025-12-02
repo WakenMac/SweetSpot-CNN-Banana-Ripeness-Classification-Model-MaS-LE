@@ -58,6 +58,14 @@ main_dataset = main_dataset[['model', 'batch_size', 'learning_rate', 'epoch', 't
 main_dataset.sort_values(['validation_accuracy', 'train_accuracy'], ascending=[False, False]).head(12)
 main_dataset.sort_values(['train_accuracy', 'validation_accuracy'], ascending=[False, False]).head(12)
 
+subset = pd.concat([
+    pd.read_csv('training_details11.csv'),
+    pd.read_csv('training_details13(64_1e-05).csv'),
+    pd.read_csv('training_details12(128).csv')
+], axis=0, ignore_index = True)
+
+pd.concat([main_dataset, subset], axis=0, ignore_index=True).to_csv('main_dataset.csv', index=False)
+
 subset = pd.read_csv('training_details8.csv')
 subset = subset.iloc[1:, :]
 subset = subset.groupby(['model', 'batch_size', 'learning_rate', 'epoch'], sort=False).last().reset_index()
@@ -72,34 +80,19 @@ new_df.to_csv('temp_details.csv', index=False)
 
 
 # GMT 32
-part1 = new_df.iloc[0:151, :]
+part1 = main_dataset.iloc[0:988, :]
 
-# GMT 64
-part2 = new_df.iloc[150:234, :]
+# GMT 32 1e-04 fine tuning
+part2 = pd.read_csv('training_details13.csv')
 
-# GMT 64 3e-05
-part9 = new_df.iloc[234:285, :]
+# GMT 32 1e-05 ... 128 3e-05
+part3 = main_dataset.iloc[988:, :]
 
-# GMT 64 1e-05 (Conti)
-part10 = new_df.iloc[291:304, :]
 
-# GMT 128
-part3 = new_df.iloc[304:497, :]
-
-# 64 3e-05
-part4 = new_df.iloc[497:512, :]
-
-# VGG19 64
-part6 = new_df.iloc[534:618, :]
-
-# VGG19 128
-part7 = new_df.iloc[618:768, :]
-
-# VGG19 32
-part8 = new_df.iloc[770:, :]
-
-new_pd = pd.concat([part1, part2, part9, part4, part10, part3, part8, part6, part7], axis=0, ignore_index = True)
-new_pd.to_csv('temp_details.csv', index=False)
+new_pd = pd.concat([
+    part1, part2, part3
+], axis=0, ignore_index = True)
+new_pd.to_csv('main_dataset.csv', index=False)
 
 subset1 = pd.concat([subset.iloc[1:51, :], subset.iloc[51:101, :], subset.iloc[151:201, :]], axis=0, ignore_index = True)
 
@@ -119,15 +112,14 @@ pd.read_csv('temp_details.csv').to_csv('main_dataset.csv', index=False)
 
 # For da plot
 
-subset = main_dataset[main_dataset['model'] == 'VGG19']
+subset = main_dataset[main_dataset['model'] == 'ResNet50']
 subset['gap'] = subset['train_accuracy'] - subset['validation_accuracy']
 subset.groupby(['model', 'batch_size', 'learning_rate']).last().reset_index().sort_values(['validation_accuracy', 'train_accuracy', 'gap'], ascending=[False, False, True]).head(20)
 subset.groupby(['model', 'batch_size', 'learning_rate']).last().reset_index().sort_values(['train_accuracy', 'validation_accuracy', 'gap'], ascending=[False, False, True]).head(20)
 
-subset['learning_rate'] = pd.to_numeric(subset['learning_rate'].astype(str).str.strip("'"), errors='coerce')
 subset = subset[
-    (subset['batch_size'] == 32) & 
-    (subset['learning_rate'] == 1e-03)
+    (subset['batch_size'] == 128) & 
+    (subset['learning_rate'] == 3e-04)
 ]
 subset = subset[np.logical_or(subset['epoch'] <= 50, np.logical_and(subset['epoch'] > 50, subset['with_weight_decay'] == True))]
 plot_losses(subset)

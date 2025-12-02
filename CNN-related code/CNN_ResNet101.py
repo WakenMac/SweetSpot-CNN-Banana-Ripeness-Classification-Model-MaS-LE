@@ -40,7 +40,7 @@ test_ds  = datasets.ImageFolder(dataset_path + '/test', transform=test_transform
 
 print("Successfully imported the train, test, and validation datasets")
 
-# Load pretrained VGG19
+# Load pretrained ResNet50
 resnet50_model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
 
 # Freeze all VGG19 weights
@@ -127,9 +127,9 @@ print('Starting model training...')
 # learning_rates = [3e-05]
 
 # batch_size_list = [32]
-batch_size_list = [64, 128]
+batch_size_list = [64]
 # batch_size_list = [32, 64, 128]
-learning_rates = [1e-03, 1e-04, 1e-05]
+learning_rates = [1.5e-04]
 
 # learning_rates = [2e-03, 6e-04, 2e-04, 6e-05, 2e-05]
 # learning_rates = [4e-03, 9e-04, 4e-04, 9e-05, 4e-05]
@@ -168,8 +168,8 @@ for batch_size in batch_size_list:
         model = ResNet50Transfer(num_classes=4)
 
         # For fine-tuning
-        # if i == 0:
-            # model.load_state_dict(torch.load('Saved Models\\vgg_19_model_128_0.001.pth'))
+        if i == 0:
+            model.load_state_dict(torch.load('Saved Models\\resnet_50_model_64_0.00015.pth'))
         model.to(device)
         # model = torch.compile(model)
         torch.backends.cudnn.benchmark = True
@@ -190,7 +190,7 @@ for batch_size in batch_size_list:
             min_lr=learning_rates[i] / 100
         )
         num_epochs = 70
-        start = 1
+        start = 55
 
         for epoch in range(start, num_epochs + 1):
             named_list = []
@@ -291,7 +291,7 @@ for batch_size in batch_size_list:
 # 3. Load the best model after training finishes
 model = ResNet50Transfer(num_classes=4).to(device)
 # model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_2_64_3e-05.pth'))
-model.load_state_dict(torch.load('Saved Models\\vgg_19_model_32_0.001.pth'))
+model.load_state_dict(torch.load('Saved Models\\resnet_50_model_128_0.0003.pth'))
 print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
 for index, p in enumerate(model.named_parameters()):
