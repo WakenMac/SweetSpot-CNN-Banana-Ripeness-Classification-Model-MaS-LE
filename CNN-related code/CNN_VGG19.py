@@ -32,6 +32,7 @@ test_transforms = transforms.Compose([
     )
 ])
 
+# Change this guys to the path sa dataset folder
 dataset_path = "C:\\Users\\Waks\\Downloads\\USEP BSCS\\School Work\\BSCS 3 - 1st Sem\\CS 3310 - Modeling and Simulation\\MaS LE\\Datasets\\GiMaTag Dataset"
 
 train_ds = datasets.ImageFolder(dataset_path + '/train', transform=train_transforms)
@@ -40,13 +41,14 @@ test_ds  = datasets.ImageFolder(dataset_path + '/test', transform=test_transform
 
 print("Successfully imported the train, test, and validation datasets")
 
-# Load pretrained VGG19
+# Load pretrained VGG19 (Mag download siya niyan)
 vgg19 = models.vgg19(weights=models.VGG19_Weights.IMAGENET1K_V1)
 
 # Freeze all VGG19 weights
 for param in vgg19.parameters():
     param.requires_grad = False
 
+# Initialize the VGG19 model
 class VGG19Transfer(nn.Module):
     def __init__(self, num_classes=4):
         super().__init__()
@@ -124,7 +126,7 @@ print('Starting model training...')
 # Original
 # learning_rates = [3e-05]
 
-batch_size_list = [128]
+batch_size_list = [32, 64]
 learning_rates = [1e-03, 1e-04, 1e-05]
 
 # learning_rates = [2e-03, 6e-04, 2e-04, 6e-05, 2e-05]
@@ -296,7 +298,7 @@ for batch_size in batch_size_list:
 # 3. Load the best model after training finishes
 model = VGG19Transfer(num_classes=4).to(device)
 # model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_2_64_3e-05.pth'))
-model.load_state_dict(torch.load('Saved Models\\vgg_19_model_32_0.001.pth'))
+model.load_state_dict(torch.load('Saved Models\\USE-THIS-DAVE_vgg_19_model_32_0.001.pth'))
 print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
 # Print Model Output Parameters:

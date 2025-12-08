@@ -45,10 +45,12 @@ test_transforms = transforms.Compose([
 
 
 dataset_path = "C:\\Users\\Waks\\Downloads\\USEP BSCS\\School Work\\BSCS 3 - 1st Sem\\CS 3310 - Modeling and Simulation\\MaS LE\\Datasets\\GiMaTag Dataset"
+# dataset_path = 'Datasets\\Original Datasets\\Fayoum Uni Dataset'
 
 train_ds = datasets.ImageFolder(dataset_path + '/train', transform=train_transforms)
 val_ds   = datasets.ImageFolder(dataset_path + '/validation', transform=test_transforms)
 test_ds  = datasets.ImageFolder(dataset_path + '/test', transform=test_transforms)
+# test_ds  = datasets.ImageFolder(dataset_path, transform=test_transforms)
 
 print("Successfully imported the train, test, and validation datasets")
 
@@ -324,11 +326,20 @@ df = pd.DataFrame({
     'with_weight_deacay':with_weight_deacy
 }).to_csv('training_details7.csv', index=False, header=True)
 
+
+
 # 3. Load the best model after training finishes
 model = GiMaTagCNN(num_classes=4).to(device)
 # model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_2_64_3e-05.pth'))
 model.load_state_dict(torch.load('Saved Models\\USE-THIS-DAVE_best_gimatag_model_wd_64_3e-05.pth'))
 print("Loaded the best performing model from 'best_gimatag_model.pth'.")
+
+# Print Model Output Parameters:
+for index, p in enumerate(model.named_parameters()):
+    print(f'Layer #{index + 1} ({p[0]}): {p[1].numel():,}')
+
+# Prints the total number of parameters
+print(f'Total Parameters: {sum([p.numel() for p in model.parameters()]):,}')
 
 # Prediction
 model.eval()

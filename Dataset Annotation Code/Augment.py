@@ -8,6 +8,9 @@
 
 # Works with Python 3.13.1
 
+# 32 items per exam
+# 32 items
+
 import os
 import cv2
 import random
