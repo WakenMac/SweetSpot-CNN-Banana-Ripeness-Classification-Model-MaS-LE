@@ -291,7 +291,7 @@ for batch_size in batch_size_list:
 # 3. Load the best model after training finishes
 model = ResNet50Transfer(num_classes=4).to(device)
 # model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_2_64_3e-05.pth'))
-model.load_state_dict(torch.load('Saved Models\\USE-THIS-DAVE_resnet_50_model_128_0.0003.pth'))
+model.load_state_dict(torch.load('Saved Models\\Old Models\\USE-THIS-DAVE_resnet_50_model_128_0.0003.pth'))
 print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
 for index, p in enumerate(model.named_parameters()):
@@ -299,6 +299,9 @@ for index, p in enumerate(model.named_parameters()):
 
 # Prints the total number of parameters
 print(f'Total Parameters: {sum([p.numel() for p in model.parameters()]):,}')
+print(f'Trainable Parameters: {sum([p.numel() for p in model.parameters() if p.requires_grad]):,}')
+print(f'Non-Trainable Parameters: {sum([p.numel() for p in model.parameters() if not p.requires_grad]):,}')
+
 
 # Prediction
 model.eval()

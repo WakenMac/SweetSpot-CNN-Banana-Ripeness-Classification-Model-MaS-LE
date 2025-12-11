@@ -8,9 +8,6 @@
 
 # Works with Python 3.13.1
 
-# 32 items per exam
-# 32 items
-
 import os
 import cv2
 import random
@@ -23,8 +20,8 @@ import pandas as pd
 # source_dir = "Datasets\\Annotated Dataset\\Fayoum Uni Dataset\\Ripe"
 # target_dir = "Datasets\\Annotated Dataset\\Fayoum Uni Augmented Dataset\\Ripe"
 
-source_dir = "Datasets\\Annotated Dataset\\Fayoum Uni Dataset\\Unripe"
-target_dir = "Datasets\\Annotated Dataset\\Fayoum Uni Augmented Dataset\\Unripe"
+ref_source_dir = "Datasets\\Annotated Datasets\\Fayoum_University_Banana _Classes\\"
+ref_target_dir = "Datasets\\Annotated Datasets\\Augment\\train\\"
 
 # Helper Methods
 def rotate_image(image, angle):
@@ -76,62 +73,86 @@ def add_gaussian_noise(image, mean=0, std=15):
 
 # Main for loop
 random.seed(777)
-DATASET_PATH = 'Annotated Dataset\\Fayoum Uni Augmented Dataset\\Augment_List.csv'
+DATASET_PATH = 'augmented_data.csv'
 dataset = None
 if os.path.exists(DATASET_PATH):
     dataset = pd.read_csv(DATASET_PATH)
 else:
     dataset = pd.DataFrame()
 
-for filename in os.listdir(source_dir):
-    if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+# for i, class_name in enumerate(['Green', 'Midripen', 'Overripen', 'Yellowish_Green']):
+for i, class_name in enumerate(['Overripe', 'Ripe', 'Unripe']):
+    source_dir = ref_source_dir + class_name
+    target_dir = ref_target_dir + class_name
 
-        name, ext = os.path.splitext(filename)
-        image_path = os.path.join(source_dir, filename)
-        image = cv2.imread(image_path)
-        
-        if image is None:
-            print(f"Skipping {filename}: could not load.")
-            continue
-        
-        # Creates the new name (plantain-overripe-0-augmented-index) 
-        # from the old name (plantain-overripe-0-annotated.jpg)
-        new_name = ""
-        parts = name.split('-')[0:3]
-        for part in parts:
-            new_name += part + '-'
-        new_name += 'augmented-'
+    for filename in os.listdir(source_dir):
+        if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
 
-        # TODO: Make a new algorithm to create unique augmented images
+            name, ext = os.path.splitext(filename)
+            image_path = os.path.join(source_dir, filename)
+            image = cv2.imread(image_path)
+            
+            if image is None:
+                print(f"Skipping {filename}: could not load.")
+                continue
+            
+            # Creates the new name (plantain-overripe-0-augmented-index) 
+            # from the old name (plantain-overripe-0-annotated.jpg)
+            new_name = ""
+            parts = name.split('-')[0:3]
+            for part in parts:
+                new_name += part + '-'
+            new_name += 'augmented-'
 
-        for i in range(10):  # Generate 10 random augmentations per image
-            std = random.randint(0, 50)
-            blur = random.randint(0, 1)
-            angle = random.uniform(-30, 30)
-            zoom = random.randint(0, 20)
-            mode = random.randint(-1, 1)
+            # TODO: Make a new algorithm to create unique augmented images
+            
+            augmented_copies = 10
+            multipliers = [1, 1.2, 3.2, 2.2]
+            # for j in range(int(augmented_copies * multipliers[i])):  # Generate 10 random augmentations per image
+            for j in range(augmented_copies):                  
+                std = random.randint(0, 50)
+                blur = random.randint(0, 1)
+                angle = random.uniform(-30, 30)
+                zoom = random.randint(0, 20)
+                mode = random.randint(-1, 1)
 
-            img_aug = add_gaussian_noise(image, std=std)
-            img_aug = blur_image(img_aug, blur)
-            img_aug = rotate_image(img_aug, angle)
-            img_aug = crop_zoom(img_aug, zoom)
-            img_aug = flip_image(img_aug, mode)
-            cv2.imwrite(os.path.join(target_dir, f"{new_name}{i}{ext}"), img_aug)
+                img_aug = add_gaussian_noise(image, std=std)
+                img_aug = blur_image(img_aug, blur)
+                img_aug = rotate_image(img_aug, angle)
+                img_aug = crop_zoom(img_aug, zoom)
+                img_aug = flip_image(img_aug, mode)
+                # cv2.imwrite(os.path.join(target_dir, f"{new_name}{j}{ext}"), img_aug)
 
-            # Find a way to store the augmentations into a DataFrame, then into a CSV for safekeeping
-            my_dict = {
-                'type':[parts[1]],
-                'orig-index':[parts[2]],
-                'aug-index':[i],
-                'std':[std],
-                'blur':[blur],
-                'angle':[angle],
-                'zoom':[zoom],
-                'mode':[mode]
-            }
-            tempDF = pd.DataFrame(my_dict)
-            dataset = pd.concat([dataset, tempDF], axis=0)
-        
-        print(f"Augmented {filename}")
+                # Find a way to store the augmentations into a DataFrame, then into a CSV for safekeeping
+                my_dict = {
+                    'type':[class_name],
+                    'original-index':[parts[2]],
+                    'augmentation-index':[j],
+                    'gaussian_noise':[std],
+                    'blur':[blur],
+                    'rotation_angle':[angle],
+                    'zoom':[zoom],
+                    'flip_image':['vertical' if mode == 0 else 'horizontal' if mode == 1 else 'both']
+                }
+                tempDF = pd.DataFrame(my_dict)
+                dataset = pd.concat([dataset, tempDF], axis=0)
+            
+            print(f"Augmented {filename}")
 
-dataset.to_csv("Annotated Dataset\\Fayoum Uni Augmented Dataset\\Augment_List.csv", index=False)
+dataset.to_csv(DATASET_PATH, index=False)
+
+# Count the number of files
+
+ref_source_dir = "Datasets\\Annotated Datasets\\Split\\"
+ref_target_dir = "Datasets\\Old GiMaTag Dataset\\"
+for i, folder_name in enumerate(['train', 'test', 'validation']):
+    main_target_dir = ref_target_dir + folder_name 
+    size = 0
+    for i, class_name in enumerate(['Overripe', 'Ripe', 'Rotten', 'Unripe']):
+        target_dir = main_target_dir + '\\' + class_name
+        temp_size = len(os.listdir(target_dir))
+        size += temp_size
+
+        print(f'{class_name} # of images: {temp_size}')
+    print(f'Total # of {folder_name} images: {size}')
+    print('\n\n')

@@ -17,6 +17,7 @@ from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 # For model evaulation
+import time
 import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix, classification_report
@@ -25,8 +26,8 @@ import matplotlib.pyplot as plt
 
 train_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomRotation(10),
+    # transforms.RandomHorizontalFlip(),
+    # transforms.RandomRotation(10),
     transforms.ToTensor(),                    # Converts to [0,1]
     transforms.Normalize(
         mean=[0.485, 0.456, 0.406],           # ImageNet normalization
@@ -43,8 +44,8 @@ test_transforms = transforms.Compose([
     )
 ])
 
-
-dataset_path = "C:\\Users\\Waks\\Downloads\\USEP BSCS\\School Work\\BSCS 3 - 1st Sem\\CS 3310 - Modeling and Simulation\\MaS LE\\Datasets\\GiMaTag Dataset"
+# Add the dataset path
+dataset_path = "C:\\Users\\Waks\\Downloads\\USEP BSCS\\School Work\\BSCS 3 - 1st Sem\\CS 3310 - Modeling and Simulation\\MaS LE\\Datasets\\Old GiMaTag Dataset"
 # dataset_path = 'Datasets\\Original Datasets\\Fayoum Uni Dataset'
 
 train_ds = datasets.ImageFolder(dataset_path + '/train', transform=train_transforms)
@@ -162,7 +163,10 @@ class EarlyStopper:
             self.counter = 0
             # Save the current best model
             # torch.save(model.state_dict(), f'Saved Models\\best_gimatag_model_2_{batch_size}_{learning_rate}.pth')
-            torch.save(model.state_dict(), f'Saved Models\\best_gimatag_model_{weight_decay}_{batch_size}_{learning_rate}.pth')
+
+            # Allan & Dave annotate this please
+            path_to_folder = 'Saved Models'
+            torch.save(model.state_dict(), f'{path_to_folder}\\best_gimatag_model_{weight_decay}_{batch_size}_{learning_rate}.pth')
             print("Validation loss improved. Model saved.")
         else:
             # No improvement
@@ -196,13 +200,18 @@ print('Starting model training...')
 # increasing dropout (0.5–0.6) if overfitting
 
 # Original
-learning_rates = [3e-05]
-# learning_rates = [1e-03, 3e-04, 1e-04, 3e-05, 1e-05]
+# learning_rates = [3e-05]
 # learning_rates = [2e-03, 6e-04, 2e-04, 6e-05, 2e-05]
 # learning_rates = [4e-03, 9e-04, 4e-04, 9e-05, 4e-05]
 # learning_rates = [3e-04, 1e-04, 3e-05, 1e-05]
 
-batch_sizes = 64
+# batch_size_list = [32, 64]
+# learning_rates = [1e-03, 3e-04, 1e-04, 3e-05, 1e-05]
+
+batch_size_list = [32]
+learning_rates = [1e-03]
+
+
 named_list = []
 accuracy_list = []
 loss_list = []
@@ -212,126 +221,164 @@ epoch_list = []
 with_ReduceLROnPlateau = True
 with_weight_deacy = []
 
-for i in range(len(learning_rates) + 1):
-    model = GiMaTagCNN(num_classes=4)
-    model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_64_3e-05.pth'))
-    model.to(device)
-    # model = torch.compile(model)
-    torch.backends.cudnn.benchmark = True
-
-    criterion = nn.CrossEntropyLoss()              # handles softmax internally
-
-    optimizer = None
-    if i == 1:
-        optimizer = optim.Adam(
-            model.parameters(), 
-            # lr=learning_rates[i],
-            lr=3e-05,
-            weight_decay=1e-5
-        )
-    else:
-        optimizer = optim.Adam(
-            model.parameters(), 
-            lr=3e-05
-        )
-    early_stopper = EarlyStopper(patience=8, min_delta=1e-04)
-    scheduler = ReduceLROnPlateau(
-        optimizer = optimizer,
-        mode='min',
-        factor=0.1,
-        patience=4,
-        # min_lr=learning_rates[i] / 100
-        min_lr=3e-05 / 100
+for batch_size in batch_size_list:
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=6,            # like prefetching: loads data in parallel
+        pin_memory=True           # speeds up GPU transfer
     )
-    num_epochs = 100
 
-    for epoch in range(50, num_epochs + 1):
-        model.train()
-        # named_list.append(f'{learning_rates[i]}')
-        named_list.append(f'{3e-05}')
-        epoch_list.append(epoch)
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=6,
+        pin_memory=True
+    )
 
-        running_loss = 0.0
-        correct = 0
-        total = 0
-        
-        for batch_idx, (inputs, labels) in enumerate(train_loader, 1):
-            inputs, labels = inputs.to(device), labels.to(device)
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=6,
+        pin_memory=True
+    )
 
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+    for i in range(len(learning_rates)):
+        # For training from scratch
+        model = GiMaTagCNN(num_classes=4)
 
-            running_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += labels.size(0)
-            correct += predicted.eq(labels).sum().item()
+        # For fine-tuning
+        # if i == 0:
+        #     model.load_state_dict(torch.load('Saved Models\\vgg_19_model_128_0.001.pth'))
+        model.to(device)
+        # model = torch.compile(model)
+        torch.backends.cudnn.benchmark = True
 
-            # Print every 10 batches
-            if batch_idx % 10 == 0:
-                print(f'Epoch [{epoch}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], '
-                    f'Loss: {running_loss / batch_idx:.4f}, '
-                    f'Accuracy: {100 * correct / total:.2f}%')
+        criterion = nn.CrossEntropyLoss()              # handles softmax internally
+        optimizer = optim.Adam(
+            model.parameters(), 
+            lr=learning_rates[i],
+            weight_decay=1e-4
+        )
 
-        # Gets the epoch's overall accuracy and average loss
-        accuracy_list.append(100 * correct / total)
-        loss_list.append(running_loss / len(train_loader))
+        early_stopper = EarlyStopper(patience=8, min_delta=1e-04)
+        scheduler = ReduceLROnPlateau(
+            optimizer = optimizer,
+            mode='min',
+            factor=0.1,
+            patience=4,
+            # min_lr=learning_rates[i] / 100
+            min_lr=learning_rates[i] / 100
+        )
 
-        # Validation after each epoch
-        model.eval()
-        val_loss = 0.0
-        val_correct = 0
-        val_total = 0
-        with torch.no_grad():
-            for inputs, labels in val_loader:
+        num_epochs = 50
+        start = 1
+
+        for epoch in range(start, num_epochs + 1):
+            named_list = []
+            accuracy_list = []
+            loss_list = []
+            validation_acc_list = []
+            validation_loss_list = []
+            epoch_list = []
+            with_ReduceLROnPlateau = True
+            with_weight_deacy = True
+
+            model.train()
+            # named_list.append(f'{learning_rates[i]}')
+            # named_list.append(f'{str(learning_rates[i])}')
+            named_list = str(learning_rates[i])
+            epoch_list = epoch
+
+            running_loss = 0.0
+            correct = 0
+            total = 0
+            
+            for batch_idx, (inputs, labels) in enumerate(train_loader, 1):
                 inputs, labels = inputs.to(device), labels.to(device)
+
+                optimizer.zero_grad()
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
-                val_loss += loss.item()
+                loss.backward()
+                optimizer.step()
+
+                running_loss += loss.item()
                 _, predicted = outputs.max(1)
-                val_total += labels.size(0)
-                val_correct += predicted.eq(labels).sum().item()
+                total += labels.size(0)
+                correct += predicted.eq(labels).sum().item()
+
+                # Print every 10 batches
+                if batch_idx % 10 == 0:
+                    print(f'Epoch [{epoch}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], '
+                        f'Loss: {running_loss / batch_idx:.4f}, '
+                        f'Accuracy: {100 * correct / total:.2f}%')
+
+            # Gets the epoch's overall accuracy and average loss
+            accuracy_list.append(100 * correct / total)
+            loss_list.append(running_loss / len(train_loader))
+
+            # Validation after each epoch
+            model.eval()
+            val_loss = 0.0
+            val_correct = 0
+            val_total = 0
+            with torch.no_grad():
+                for inputs, labels in val_loader:
+                    inputs, labels = inputs.to(device), labels.to(device)
+                    outputs = model(inputs)
+                    loss = criterion(outputs, labels)
+                    val_loss += loss.item()
+                    _, predicted = outputs.max(1)
+                    val_total += labels.size(0)
+                    val_correct += predicted.eq(labels).sum().item()
+                
+            avg_val_loss = val_loss / len(val_loader)
+            val_accuracy = 100 * val_correct / val_total
+
+            # print(f'Learning Rate: {learning_rates[i]}, '
+            print(f'Learning Rate: {optimizer.param_groups[0]["lr"]}, '
+                f'Epoch [{epoch}/{num_epochs}] completed. '
+                f'Validation Loss: {avg_val_loss:.4f}, '
+                f'Validation Accuracy: {val_accuracy:.2f}%\n')
             
-        avg_val_loss = val_loss / len(val_loader)
-        val_accuracy = 100 * val_correct / val_total
+            validation_acc_list.append(val_accuracy)
+            validation_loss_list.append(avg_val_loss)
 
-        # print(f'Learning Rate: {learning_rates[i]}, '
-        print(f'Learning Rate: {optimizer.param_groups[0]["lr"]}, '
-            f'Epoch [{epoch}/{num_epochs}] completed. '
-            f'Validation Loss: {avg_val_loss:.4f}, '
-            f'Validation Accuracy: {val_accuracy:.2f}%\n')
+            scheduler.step(avg_val_loss)
+
+            # if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_sizes):
+            if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_size):
+                print(f"🛑 Early stopping triggered after {epoch} epochs!")
+                break # Exit the training loop
         
-        validation_acc_list.append(val_accuracy)
-        validation_loss_list.append(avg_val_loss)
-        with_weight_deacy.append(True if i == 1 else False)
+            # Creating the template for training_details9.csv
+            # pd.DataFrame(None, None, ['model', 'batch_size', 'learning_rate', 'epoch', 'train_accuracy', 'train_loss',
+            #             'validation_accuracy', 'validation_loss', 'with_ReduceLROnPlateau',
+            #             'with_weight_decay']).to_csv('training_details11.csv', index=False)
 
-        scheduler.step(avg_val_loss)
+            df = pd.DataFrame({
+                'model':'VGG19',
+                'batch_size':batch_size,
+                'learning_rate':str(named_list),
+                'epoch':epoch_list,
+                'train_accuracy':accuracy_list,
+                'train_loss': loss_list,
+                'validation_accuracy': validation_acc_list,
+                'validation_loss':validation_loss_list,
+                'with_ReduceLROnPlateau':with_ReduceLROnPlateau,
+                'with_weight_decay':with_weight_deacy
+            })
 
-        # if early_stopper.check_stop(avg_val_loss, learning_rates[i], batch_sizes):
-        if early_stopper.check_stop(avg_val_loss, 3e-05, batch_sizes, i):
-            print(f"🛑 Early stopping triggered after {epoch} epochs!")
-            break # Exit the training loop
-    
-df = pd.DataFrame({
-    'batch_size':batch_sizes,
-    'named_list':named_list,
-    'epoch':epoch_list,
-    'train_accuracy':accuracy_list,
-    'train_loss': loss_list,
-    'validation_accuracy': validation_acc_list,
-    'validation_loss':validation_loss_list,
-    'with_ReduceLROnPlateau':with_ReduceLROnPlateau,
-    'with_weight_deacay':with_weight_deacy
-}).to_csv('training_details7.csv', index=False, header=True)
-
-
+            pd.concat([pd.read_csv('training_details11.csv'), df], axis=0, ignore_index=True).to_csv('training_details11.csv', index=False)
 
 # 3. Load the best model after training finishes
 model = GiMaTagCNN(num_classes=4).to(device)
 # model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_2_64_3e-05.pth'))
-model.load_state_dict(torch.load('Saved Models\\USE-THIS-DAVE_best_gimatag_model_wd_64_3e-05.pth'))
+model.load_state_dict(torch.load('Saved Models\\Old Models\\USE-THIS-DAVE_best_gimatag_model_wd_64_3e-05.pth'))
 print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
 # Print Model Output Parameters:
@@ -340,6 +387,8 @@ for index, p in enumerate(model.named_parameters()):
 
 # Prints the total number of parameters
 print(f'Total Parameters: {sum([p.numel() for p in model.parameters()]):,}')
+print(f'Trainable Parameters: {sum([p.numel() for p in model.parameters() if p.requires_grad]):,}')
+print(f'Non-Trainable Parameters: {sum([p.numel() for p in model.parameters() if not p.requires_grad]):,}')
 
 # Prediction
 model.eval()
@@ -348,6 +397,7 @@ total_labels = 0
 predicted_labels = []
 all_labels = []
 
+start = time.time()
 with torch.no_grad():
     print('Starting model evaluation now.')
     for images, labels in test_loader:
@@ -362,8 +412,9 @@ with torch.no_grad():
 
         total_labels += labels.size(0)
         total_correct += predicted.eq(labels).sum().item()
-
+end = time.time()
 test_accuracy = 100 * (total_correct / total_labels)
+print(f'Time taken to predict: {end - start}')
 print(f"Test Accuracy: {total_correct}/{total_labels} ({test_accuracy:.2f}%)")
 
 result = pd.DataFrame({
