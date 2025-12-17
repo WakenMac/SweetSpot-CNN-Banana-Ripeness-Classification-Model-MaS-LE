@@ -112,15 +112,32 @@ pd.read_csv('temp_details.csv').to_csv('main_dataset.csv', index=False)
 
 # For da plot
 
-subset = main_dataset[main_dataset['model'] == 'ResNet50']
+
+# Subsetting for the 
+subset = main_dataset[main_dataset['model'] == 'GiMaTag']
 subset['gap'] = subset['train_accuracy'] - subset['validation_accuracy']
-subset.groupby(['model', 'batch_size', 'learning_rate']).last().reset_index().sort_values(['validation_accuracy', 'train_accuracy', 'gap'], ascending=[False, False, True]).head(20)
+# subset[subset['epoch'] <= 50] \
+subset \
+    .groupby(['model', 'batch_size', 'learning_rate']).last().reset_index() \
+    .sort_values(['train_accuracy', 'validation_accuracy', 'gap'], ascending=[False, False, True]) \
+    [['epoch', 'batch_size', 'learning_rate', 'train_accuracy', 'validation_accuracy', 'gap']] \
+    .head(20)
 subset.groupby(['model', 'batch_size', 'learning_rate']).last().reset_index().sort_values(['train_accuracy', 'validation_accuracy', 'gap'], ascending=[False, False, True]).head(20)
 
+subset = main_dataset[main_dataset['model'] == 'ResNet50']
+subset[subset['epoch'] == 50] \
+    .groupby(['model', 'batch_size', 'learning_rate']).last().reset_index() \
+    .value_counts()
+
+subset = main_dataset[main_dataset['model'] == 'ResNet50']
+subset['gap'] = subset['train_accuracy'] - subset['validation_accuracy']
+subset['loss_gap'] = subset['train_loss'] - subset['validation_loss']
 subset = subset[
     (subset['batch_size'] == 128) & 
     (subset['learning_rate'] == 3e-04)
+    # (subset['epoch'] <= 50)
 ]
+subset.iloc[-1, :]
 subset = subset[np.logical_or(subset['epoch'] <= 50, np.logical_and(subset['epoch'] > 50, subset['with_weight_decay'] == True))]
 plot_losses(subset)
 plot_accuracy(subset)

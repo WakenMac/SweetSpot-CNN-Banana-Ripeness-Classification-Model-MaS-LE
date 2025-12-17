@@ -8,6 +8,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 # For model evaulation
 import numpy as np
 import pandas as pd
+import time
 from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -292,6 +293,7 @@ for batch_size in batch_size_list:
 model = ResNet50Transfer(num_classes=4).to(device)
 # model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_2_64_3e-05.pth'))
 model.load_state_dict(torch.load('Saved Models\\Old Models\\USE-THIS-DAVE_resnet_50_model_128_0.0003.pth'))
+torch.save(model, 'Saved Models\\New Models\\ResNet50.pt')
 print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
 for index, p in enumerate(model.named_parameters()):
@@ -310,6 +312,7 @@ total_labels = 0
 predicted_labels = []
 all_labels = []
 
+start = time.time()
 with torch.no_grad():
     print('Starting model evaluation now.')
     for images, labels in test_loader:
@@ -324,8 +327,9 @@ with torch.no_grad():
 
         total_labels += labels.size(0)
         total_correct += predicted.eq(labels).sum().item()
-
+end = time.time()
 test_accuracy = 100 * (total_correct / total_labels)
+print(f'Time taken to predict: {end - start}')
 print(f"Test Accuracy: {total_correct}/{total_labels} ({test_accuracy:.2f}%)")
 
 result = pd.DataFrame({

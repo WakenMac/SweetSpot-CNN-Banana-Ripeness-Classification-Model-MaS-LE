@@ -379,6 +379,7 @@ for batch_size in batch_size_list:
 model = GiMaTagCNN(num_classes=4).to(device)
 # model.load_state_dict(torch.load('Saved Models\\best_gimatag_model_2_64_3e-05.pth'))
 model.load_state_dict(torch.load('Saved Models\\Old Models\\USE-THIS-DAVE_best_gimatag_model_wd_64_3e-05.pth'))
+torch.save(model, 'Saved Models\\New Models\\GiMaTagCNN.pt')
 print("Loaded the best performing model from 'best_gimatag_model.pth'.")
 
 # Print Model Output Parameters:

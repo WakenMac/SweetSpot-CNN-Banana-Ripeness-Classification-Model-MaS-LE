@@ -1,7 +1,18 @@
-tensorflow
+# For handling paths
+pathlib
+
+# For data augmentation
 opencv-python
 numpy
 pandas
+
+# For training the models
+tensorflow
+torch
+torchvision
+torchaudio
+
+# For evaluating the models
+scikit-learn
 seaborn
 matplotlib
-pathlib
